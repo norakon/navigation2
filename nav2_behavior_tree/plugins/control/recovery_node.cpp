@@ -36,10 +36,13 @@ BT::NodeStatus RecoveryNode::tick()
   if (children_count != 2) {
     throw BT::BehaviorTreeException("Recovery Node '" + name() + "' must only have 2 children.");
   }
+  if (number_of_retries_ < -1) {
+    throw BT::BehaviorTreeException("Parameter number_of_retries of '" + name() + "' allows only positive values or -1 for infinite retries.");
+  }
 
   setStatus(BT::NodeStatus::RUNNING);
 
-  while (current_child_idx_ < children_count && retry_count_ <= number_of_retries_) {
+  while (current_child_idx_ < children_count && (retry_count_ <= number_of_retries_ || number_of_retries_ == -1)) {
     TreeNode * child_node = children_nodes_[current_child_idx_];
     const BT::NodeStatus child_status = child_node->executeTick();
 
@@ -62,7 +65,7 @@ BT::NodeStatus RecoveryNode::tick()
 
         case BT::NodeStatus::FAILURE:
           {
-            if (retry_count_ < number_of_retries_) {
+            if (retry_count_ < number_of_retries_ || number_of_retries_ == -1) {
               // halt first child and tick second child in next iteration
               ControlNode::haltChild(0);
               current_child_idx_++;
