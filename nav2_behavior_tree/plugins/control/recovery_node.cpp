@@ -37,12 +37,16 @@ BT::NodeStatus RecoveryNode::tick()
     throw BT::BehaviorTreeException("Recovery Node '" + name() + "' must only have 2 children.");
   }
   if (number_of_retries_ < -1) {
-    throw BT::BehaviorTreeException("Parameter number_of_retries of '" + name() + "' allows only positive values or -1 for infinite retries.");
+    throw BT::BehaviorTreeException(
+        "Parameter number_of_retries of '" + name() +
+        "' allows only values >= 0 for finite number of retries or -1 for infinite retries.");
   }
 
   setStatus(BT::NodeStatus::RUNNING);
 
-  while (current_child_idx_ < children_count && (retry_count_ <= number_of_retries_ || number_of_retries_ == -1)) {
+  while (current_child_idx_ < children_count &&
+    (retry_count_ <= number_of_retries_ || number_of_retries_ == -1))
+  {
     TreeNode * child_node = children_nodes_[current_child_idx_];
     const BT::NodeStatus child_status = child_node->executeTick();
 
