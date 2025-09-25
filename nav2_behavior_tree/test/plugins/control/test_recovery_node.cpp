@@ -58,7 +58,7 @@ class RecoveryNodeTestFixture : public nav2_behavior_tree::BehaviorTreeTestFixtu
 public:
   void SetUp() override
   {
-    config_->input_ports["number_of_retries"] = 1;
+    config_->input_ports["number_of_retries"] = number_of_retries_;
     bt_node_ = std::make_shared<nav2_behavior_tree::RecoveryNode>(
       "recovery_node", *config_);
     first_child_ = std::make_shared<RecoveryDummy>();
@@ -74,10 +74,25 @@ public:
     bt_node_.reset();
   }
 
+  void updateNumberOfRetries(const int number_of_retries) {
+    number_of_retries_ = number_of_retries;
+  }
+
 protected:
   static std::shared_ptr<nav2_behavior_tree::RecoveryNode> bt_node_;
   static std::shared_ptr<RecoveryDummy> first_child_;
   static std::shared_ptr<RecoveryDummy> second_child_;
+  int number_of_retries_{1};
+};
+
+class RecoveryNodeParamTestFixture : public RecoveryNodeTestFixture, 
+                                     public ::testing::WithParamInterface<int> 
+{
+  void SetUp() override
+  {
+    updateNumberOfRetries(GetParam());
+    RecoveryNodeTestFixture::SetUp() ;
+  }
 };
 
 std::shared_ptr<nav2_behavior_tree::RecoveryNode> RecoveryNodeTestFixture::bt_node_ = nullptr;
@@ -163,6 +178,21 @@ TEST_F(RecoveryNodeTestFixture, test_skipping)
   EXPECT_EQ(first_child_->status(), BT::NodeStatus::IDLE);
   EXPECT_EQ(second_child_->status(), BT::NodeStatus::IDLE);
 }
+
+// manipulate number_of_retries: 
+TEST_P(RecoveryNodeParamTestFixture, test_no_retries)
+{
+  first_child_->changeStatus(BT::NodeStatus::RUNNING);
+  EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::RUNNING);
+  first_child_->changeStatus(BT::NodeStatus::FAILURE);
+  EXPECT_EQ(bt_node_->executeTick(), BT::NodeStatus::FAILURE);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    RecoveryNodeParamTestFixtureTests,
+    RecoveryNodeParamTestFixture,
+    ::testing::Values(0, 42)
+);
 
 
 int main(int argc, char ** argv)
